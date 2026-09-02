@@ -1,0 +1,17 @@
+{
+  "name": "01-tool-description",
+  "version": "1.0.0",
+  "description": "Component    Question it answers                  What happens without it ────────────────────────────────────────────────────────────────────────── 1. What      \"What does this tool do?\"            Claude doesn't know purpose 2. Returns   \"What will I get back?\"              Claude can't plan next step 3. When      \"Which signals mean: use this?\"      Claude guesses on triggers 4. NOT when  \"Which signals mean: don't use this?\"Claude misroutes on similar queries 5. Example   \"What does a real call look like?\"   Claude uses wrong input format",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
+    "dotenv": "^17.4.2"
+  }
+}
