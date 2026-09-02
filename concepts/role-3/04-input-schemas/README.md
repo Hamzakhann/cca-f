@@ -1,0 +1,1 @@
+Required means the tool cannot run without it. Optional means provide it if available. Nullable required means the field must always be answered — but null is the honest answer when the information is absent. Marking absent information as required causes fabrication. Fabricated values look real and cause silent downstream failures.
