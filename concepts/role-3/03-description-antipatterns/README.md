@@ -1,0 +1,1 @@
+There are exactly 6 ways a tool description fails: vague action, missing return shape, missing negative boundary, overlapping scope with another tool, wrong consolidation hiding routing in a parameter, and write operations buried inside read tool names. Each failure causes a different problem. The fix for each is different. Know all six.
