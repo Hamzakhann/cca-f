@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "claudecare-tools": {
+      "command": "node",
+      "args": ["src/mcp/server.js"],
+      "env": {
+        "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}",
+        "CLAUDECARE_API_TOKEN": "${CLAUDECARE_API_TOKEN}"
+      }
+    }
+  }
+}

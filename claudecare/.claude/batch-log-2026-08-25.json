@@ -1,0 +1,13 @@
+{
+  "batch_id": "msgbatch_01BFmc9XszZVhqmVtQBnNTC3",
+  "submitted_at": "2026-08-25T11:35:44.953Z",
+  "ticket_count": 5,
+  "custom_ids": [
+    "ticket-001",
+    "ticket-002",
+    "ticket-003",
+    "ticket-004",
+    "ticket-005"
+  ],
+  "status": "processing"
+}

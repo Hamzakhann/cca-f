@@ -1,0 +1,22 @@
+{
+  "session_id": "C-1001",
+  "created_at": "2026-08-27T09:11:55.503Z",
+  "last_updated": "2026-08-27T09:12:34.677Z",
+  "resolved_issues": [
+    {
+      "issue": "billing duplicate",
+      "resolved_at": "2026-08-27T09:12:34.677Z"
+    },
+    {
+      "issue": "return request",
+      "resolved_at": "2026-08-27T09:12:34.677Z"
+    }
+  ],
+  "pending_issues": [],
+  "key_facts": {},
+  "agent_outputs": {
+    "billing": "## 🔍 Duplicate Billing Investigation — C-1001 / INV-1001\n\nHere's a full breakdown of my findings:\n\n---\n\n### 📄 Invoice Findings\n| Field | Detail |\n|---|---|\n| **Invoice ID** | INV-1001 |\n| **Invoice Amount** | PKR 12,500 |\n| **Issue Date** | 2026-08-01 |\n| **Status** | Paid |\n| **Payment Count** | **2 ⚠️** *(should be 1)* |\n\n> 🚨 **Red Flag:** `payment_count: 2` on a single invoice is a direct indicator of a duplicate charge.\n\n---\n\n### 💳 Payment History Findings\n| Payment ID | Invoice | Date | Amount | Status |\n|---|---|---|---|---|\n| PAY-8001 | INV-1001 | 2026-08-01 | PKR 12,500 | ✅ Completed |\n| PAY-8002 | INV-1001 | 2026-08-02 | PKR 12,500 | ✅ Completed |\n\n> 🚨 **Red Flag:** Two **separate completed payments** of the **same amount (PKR 12,500)** were charged against the **same invoice (INV-1001)** on **two consecutive days** — this is a confirmed duplicate charge.\n\n---\n\n### ✅ Investigation Verdict: **Duplicate Charge Confirmed**\n\nThe customer's claim is **fully validated** by both data sources:\n- ✔️ Invoice shows `payment_count: 2` — one invoice, paid twice.\n- ✔️ Payment history shows PAY-8001 and PAY-8002 hitting the same invoice on back-to-back days.\n- ✔️ The duplicate amount is **PKR 12,500**, which is within the **PKR 50,000 automated refund limit**.\n\n---\n\n### 💡 Recommended Next Step\n\nWith the duplicate charge confirmed, I can immediately process an automated refund of **PKR 12,500** for the erroneous payment **PAY-8002**. Shall I go ahead?",
+    "returns": "Great news for Customer C-1001! Here's a full summary of the return eligibility evaluation:\n\n---\n\n## ✅ Return Eligibility Summary — ORD-5001\n\n| Detail | Info |\n|---|---|\n| **Order ID** | ORD-5001 |\n| **Item** | Wireless Headphones |\n| **Payment Status** | ✅ Paid |\n| **Shipping Status** | 📦 Delivered |\n| **Days Since Purchase** | 12 days |\n| **Return Eligible** | ✅ **Yes** |\n| **Days Remaining in Window** | 🗓️ 18 days left |\n| **Refund Amount** | 💰 PKR 15,000 |\n\n---\n\n### 📋 Eligibility Verdict\n\nCustomer **C-1001** is **fully eligible** for a return on their **Wireless Headphones**. The order was purchased **12 days ago**, which falls well within ClaudeCare's **30-day return window**, with **18 days still remaining**.\n\nA full refund of **PKR 15,000** is applicable upon successful return processing."
+  },
+  "error_log": []
+}

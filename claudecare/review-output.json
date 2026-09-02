@@ -1,0 +1,88 @@
+{
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "api_error_status": null,
+    "duration_ms": 74827,
+    "duration_api_ms": 75802,
+    "num_turns": 7,
+    "result": "Review complete. **1 finding, 0 high-severity — passes the gate.**\n\n- **medium / tool-description** — `src/mcp/tools/process_refund.js:4` — description advertises `estimated_processing_days` in its Returns component but the executor returns `estimated_days` (line 91). Rename one side to match the other.\n\n`escalate_to_human.js` cleared all six criteria categories (structured errors, no monetary returns, all 5 description components present, no loop text-parsing, PKR-50k rule already covered by `refundGuard.js` hook).",
+    "stop_reason": "end_turn",
+    "session_id": "8141b66f-9917-4f10-bc4b-23059663d594",
+    "total_cost_usd": 0.39097875000000004,
+    "usage": {
+        "input_tokens": 9,
+        "cache_creation_input_tokens": 35207,
+        "cache_read_input_tokens": 90120,
+        "output_tokens": 5014,
+        "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+            "ephemeral_1h_input_tokens": 35207,
+            "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "",
+        "iterations": [
+            {
+                "input_tokens": 1,
+                "output_tokens": 186,
+                "cache_read_input_tokens": 34313,
+                "cache_creation_input_tokens": 894,
+                "cache_creation": {
+                    "ephemeral_5m_input_tokens": 0,
+                    "ephemeral_1h_input_tokens": 894
+                },
+                "type": "message"
+            }
+        ],
+        "speed": "standard"
+    },
+    "modelUsage": {
+        "claude-haiku-4-5-20251001": {
+            "inputTokens": 395,
+            "outputTokens": 17,
+            "cacheReadInputTokens": 0,
+            "cacheCreationInputTokens": 0,
+            "webSearchRequests": 0,
+            "costUSD": 0.00048,
+            "contextWindow": 200000,
+            "maxOutputTokens": 32000
+        },
+        "claude-opus-4-7": {
+            "inputTokens": 9,
+            "outputTokens": 5014,
+            "cacheReadInputTokens": 90120,
+            "cacheCreationInputTokens": 35207,
+            "webSearchRequests": 0,
+            "costUSD": 0.39049875000000006,
+            "contextWindow": 1000000,
+            "maxOutputTokens": 64000
+        }
+    },
+    "permission_denials": [],
+    "structured_output": {
+        "findings": [
+            {
+                "file": "src/mcp/tools/process_refund.js",
+                "line": 4,
+                "severity": "medium",
+                "category": "tool-description",
+                "description": "The 'Returns' component of the description promises a field named `estimated_processing_days`, but the executor (line 91) actually returns the field `estimated_days`. The return-field list (component 2 of the 5 required description components) is inaccurate, so a caller that reads the description will look for a field that does not exist on the tool result.",
+                "suggestion": "Either rename the returned field to `estimated_processing_days` at line 91 to match the description, or update the description text on line 4 to list the field as `estimated_days` so the tool's advertised return shape matches its actual return shape."
+            }
+        ],
+        "summary": {
+            "total": 1,
+            "high": 0,
+            "medium": 1,
+            "low": 0,
+            "passed": true
+        }
+    },
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "uuid": "61aa074c-aa05-4ec8-8187-64ea1cb0fce1"
+}

@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["findings", "summary"],
+  "properties": {
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "line", "severity", "category", "description", "suggestion"],
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "Relative file path from project root"
+          },
+          "line": {
+            "type": "integer",
+            "description": "Line number where the issue occurs"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["high", "medium", "low"],
+            "description": "high: bugs/security, medium: standards violations, low: style"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "error-structure",
+              "currency-format",
+              "tool-description",
+              "loop-termination",
+              "hook-enforcement",
+              "test-coverage",
+              "context-isolation",
+              "security"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "Specific description of the issue"
+          },
+          "suggestion": {
+            "type": "string",
+            "description": "Concrete fix suggestion with example if applicable"
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total", "high", "medium", "low", "passed"],
+      "properties": {
+        "total": { "type": "integer" },
+        "high": { "type": "integer" },
+        "medium": { "type": "integer" },
+        "low": { "type": "integer" },
+        "passed": {
+          "type": "boolean",
+          "description": "true if zero high-severity findings"
+        }
+      }
+    }
+  }
+}

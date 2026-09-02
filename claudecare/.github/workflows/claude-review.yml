@@ -1,0 +1,132 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  review:
+    name: Claude Code Review
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          CHANGED=$(git diff --name-only origin/main...HEAD \
+            | grep -E '\.(js|json|md)$' \
+            | tr '\n' ' ')
+          echo "files=$CHANGED" >> $GITHUB_OUTPUT
+
+      - name: Restore prior review findings
+        id: prior-findings
+        run: |
+          if [ -f .claude/prior-review-findings.json ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Claude Code review
+        id: claude-review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          PRIOR_CONTEXT=""
+          if [ "${{ steps.prior-findings.outputs.found }}" = "true" ]; then
+            PRIOR_CONTEXT="Prior review findings are in .claude/prior-review-findings.json. Report only NEW or STILL-UNADDRESSED issues."
+          fi
+
+          claude -p \
+            --output-format json \
+            --json-schema "$(cat ./schemas/review-schema.json)" \
+            "Review the following changed files for ClaudeCare
+             standards violations.
+
+             Changed files: ${{ steps.changed-files.outputs.files }}
+
+             Instructions:
+             1. Read src/prompts/review-criteria.md
+             2. Review only the changed files listed above
+             3. Apply the explicit criteria from review-criteria.md
+             4. ${PRIOR_CONTEXT}
+             5. Output must match schemas/review-schema.json exactly
+
+             Do not review unchanged files.
+             Do not report style preferences.
+             Only report findings you can map to a specific criterion." \
+          > review-output.json
+
+      - name: Save findings for next run
+        run: |
+          cp review-output.json .claude/prior-review-findings.json
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .claude/prior-review-findings.json
+          git commit -m "ci: update prior review findings [skip ci]" || true
+          git push || true
+
+      - name: Post review comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const review = JSON.parse(
+              fs.readFileSync('review-output.json', 'utf8')
+            );
+
+            const severity_icon = {
+              high: '🔴', medium: '🟡', low: '🔵'
+            };
+
+            let body = '## Claude Code Review\n\n';
+
+            if (review.findings.length === 0) {
+              body += '✅ No issues found. All changed files pass ClaudeCare standards.\n';
+            } else {
+              body += `Found **${review.summary.total}** issue(s): `;
+              body += `${review.summary.high} high, `;
+              body += `${review.summary.medium} medium, `;
+              body += `${review.summary.low} low\n\n`;
+
+              for (const f of review.findings) {
+                body += `### ${severity_icon[f.severity]} ${f.file}:${f.line}\n`;
+                body += `**Category:** \`${f.category}\`\n\n`;
+                body += `${f.description}\n\n`;
+                body += `**Suggestion:** ${f.suggestion}\n\n`;
+                body += '---\n\n';
+              }
+            }
+
+            body += review.summary.passed
+              ? '\n✅ **Review passed** — no high-severity findings.'
+              : '\n❌ **Review failed** — high-severity findings must be addressed.';
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

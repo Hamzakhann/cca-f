@@ -1,0 +1,77 @@
+{
+  "structured_output": {
+    "findings": [
+      {
+        "file": "src/agents/returnsAgent.js",
+        "line": 1,
+        "severity": "high",
+        "category": "hook-enforcement",
+        "description": "returnsAgent.js does not import or apply runPreToolCall/runPostToolUse lifecycle hooks before and after tool execution, unlike billingAgent.js which wraps executors with these hooks. This means tool calls in the returns agent bypass pre-call guards (e.g., blocking dangerous operations) and post-call processing entirely.",
+        "suggestion": "Mirror the createHookedExecutors pattern from billingAgent.js: import { runPreToolCall, runPostToolUse } from '../hooks/index.js' and wrap filteredExecutors before passing them to runAgent. Example:\n\nfunction createHookedExecutors(executors) {\n  const hooked = {};\n  for (const [toolName, executorFn] of Object.entries(executors)) {\n    hooked[toolName] = async (toolArgs) => {\n      const guard = runPreToolCall(toolName, toolArgs);\n      if (guard && guard.blocked) return guard.message;\n      const rawResult = await executorFn(toolArgs);\n      const rawJson = typeof rawResult === 'string' ? rawResult : JSON.stringify(rawResult);\n      return runPostToolUse(toolName, rawJson);\n    };\n  }\n  return hooked;\n}\nconst hookedExecutors = createHookedExecutors(filteredExecutors);"
+      },
+      {
+        "file": "src/agents/technicalSupportAgent.js",
+        "line": 1,
+        "severity": "high",
+        "category": "hook-enforcement",
+        "description": "technicalSupportAgent.js does not import or apply runPreToolCall/runPostToolUse lifecycle hooks, for the same reason as returnsAgent.js. Tool calls are unguarded and unprocessed post-execution.",
+        "suggestion": "Apply the same createHookedExecutors wrapper pattern as billingAgent.js. Import { runPreToolCall, runPostToolUse } from '../hooks/index.js' and wrap filteredExecutors before passing to runAgent."
+      },
+      {
+        "file": "src/agents/coordinator.js",
+        "line": 115,
+        "severity": "medium",
+        "category": "error-structure",
+        "description": "Promise.all is used to dispatch subagents in parallel, but there is no error handling. If any one subagent rejects, the entire Promise.all rejects and the coordinator throws without returning any partial results or a graceful degraded response to the customer.",
+        "suggestion": "Use Promise.allSettled instead of Promise.all so that one agent failure does not cancel the others. Then inspect each result's status field:\n\nconst results = await Promise.allSettled(tasks);\ntaskTypes.forEach((type, idx) => {\n  const r = results[idx];\n  const value = r.status === 'fulfilled' ? r.value : `[${type} agent error: ${r.reason?.message}]`;\n  if (type === 'billing') billingResult = value;\n  if (type === 'returns') returnsResult = value;\n  if (type === 'technical') technicalResult = value;\n});"
+      },
+      {
+        "file": "src/agents/coordinator.js",
+        "line": 49,
+        "severity": "medium",
+        "category": "context-isolation",
+        "description": "If the triage response omits individual *_context fields and instead returns a generic customer_context field (which the prompt does not define), the fallback logic at lines 56-58 appends a task instruction to all three context strings equally. This could send billing-specific data to the returns agent and vice versa, leaking cross-domain context.",
+        "suggestion": "Remove the customer_context fallback branches. If a specialist context field is empty, pass an empty string or the original userMessage narrowed by role. The triage system prompt already mandates separate context fields; enforce that contract rather than falling back to a shared context:\n\nconst billingContext = triage.billing_context || '';\nconst returnsContext = triage.returns_context || '';\nconst technicalContext = triage.technical_context || '';"
+      },
+      {
+        "file": "src/agents/coordinator.js",
+        "line": 44,
+        "severity": "medium",
+        "category": "tool-description",
+        "description": "The triage system prompt instructs the model to respond with a JSON object that includes a customer_context field in the description but not in the schema. This ambiguity may cause the model to emit a field that the code does not expect in the schema, leading to the problematic fallback at lines 56-58.",
+        "suggestion": "Remove all references to customer_context from the triage system prompt. Define exactly the six fields that are expected and nothing else:\n{\n  \"needs_billing\": boolean,\n  \"needs_returns\": boolean,\n  \"needs_technical\": boolean,\n  \"billing_context\": \"string\",\n  \"returns_context\": \"string\",\n  \"technical_context\": \"string\"\n}"
+      },
+      {
+        "file": "src/agents/billingAgent.js",
+        "line": 34,
+        "severity": "medium",
+        "category": "error-structure",
+        "description": "When runPreToolCall returns a blocked guard, the hooked executor returns guard.message (a plain string) as the tool result. Downstream code in runAgent likely expects a JSON-formatted tool result string. Returning a raw string may break the agent loop's result parsing.",
+        "suggestion": "Wrap the blocked response in the same JSON envelope the agent loop expects from tool results. For example:\nif (guard && guard.blocked) {\n  return JSON.stringify({ blocked: true, message: guard.message });\n}"
+      },
+      {
+        "file": "src/agents/coordinator.js",
+        "line": 107,
+        "severity": "low",
+        "category": "tool-description",
+        "description": "The synthesis user prompt concatenates the original customer message and specialist findings without any delimiter or newline between the two sections, making the prompt harder for the model to parse correctly.",
+        "suggestion": "Add explicit section separators:\nconst synthesisUserPrompt = `Original Customer Request:\\n${userMessage}\\n\\nSpecialist Agent Findings:\\n${specialistFindings}\\n\\nPlease synthesize a final customer-facing resolution response based on the above findings.`;"
+      },
+      {
+        "file": "src/agents/returnsAgent.js",
+        "line": 14,
+        "severity": "low",
+        "category": "test-coverage",
+        "description": "escalate_to_human is listed in ALLOWED_TOOL_NAMES for both returnsAgent and technicalSupportAgent, but there is no indication that integration tests cover the escalation path for these agents, especially given the missing hooks which could cause silent failures during escalation.",
+        "suggestion": "Add integration tests that trigger escalate_to_human for both returnsAgent and technicalSupportAgent and assert the agent loop handles the (unhooked) raw result correctly. Once hooks are added, verify that runPostToolUse is called on the escalation result."
+      }
+    ],
+    "summary": {
+      "total": 8,
+      "high": 2,
+      "medium": 4,
+      "low": 2,
+      "passed": false
+    }
+  }
+}
