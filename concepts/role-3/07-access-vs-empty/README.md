@@ -1,0 +1,1 @@
+An empty result and an access failure can look identical to the caller. The only way to distinguish them is isError: true on the access failure. An empty array inside try means "no records found." An empty array inside catch means "we couldn't check" — and is a silent bug that causes wrong conclusions in financial systems.
