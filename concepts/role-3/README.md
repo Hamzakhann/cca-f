@@ -87,3 +87,139 @@ When you design a new tool:
 8. Write executor    → try = valid result, catch = isError: true always
 9. Test selection    → direct, indirect, ambiguous — 3 runs each
 10. Test errors      → all 4 categories, check isRetryable is correct
+
+
+
+
+=======================================
+
+
+
+
+Configuration determines who gets your tools, how credentials stay safe, when tools are discovered, what reference data costs nothing to read, and how many tools each agent should have.
+
+
+### 5 Concepts — One Line Each
+8.  Config scope    → .mcp.json is team-shared. ~/.claude.json is personal.
+9.  Env expansion   → ${VAR} in the file. Real value in .env. Never in git.
+10. Discovery       → All tools load once at session start. New tool = restart.
+11. Resources       → Stable policy docs loaded free. Tools for live data only.
+12. Scoping         → 5 tools max per agent. One registry, filtered per role.
+
+
+### Concept 8 — The Two Files
+
+.mcp.json
+  Location:  repo root
+  Committed: YES
+  Who gets:  everyone who clones
+  Use for:   team tools
+
+~/.claude.json
+  Location:  home directory
+  Committed: NEVER
+  Who gets:  only you
+  Use for:   personal experiments
+
+
+Exam scenario: Works for one developer, fails for everyone else → config is in ~/.claude.json. Fix: move to .mcp.json.
+
+
+### The .gitignore rule:
+.env       → IN .gitignore     (real secrets)
+.mcp.json  → NOT in .gitignore (safe with ${VAR})
+
+
+### Concept 9 — The Three Rules
+Rule 1: Secrets → .env → gitignored
+        Real values live here. Never commit.
+
+Rule 2: .mcp.json → ${VAR} → committed
+        Placeholders only. Claude resolves at runtime.
+
+Rule 3: Accidental commit → rotate immediately
+        Git history is permanent.
+        Deleting in next commit does not remove from history.
+
+
+What Claude Code does with ${ANTHROPIC_API_KEY}:
+Looks up process.env.ANTHROPIC_API_KEY at runtime. Substitutes in memory. File on disk never changes. Git never sees the real value.
+
+
+
+### Concept 10 — The Three Implications
+
+Implication 1: All tools available from turn 1
+               No activation needed. Select by description.
+
+Implication 2: New tool added? Restart Claude Code.
+               Discovery already happened. Session cannot see it.
+
+Implication 3: Server offline at startup = tools missing all session.
+               Fix server AND restart Claude Code.
+
+### Concept 11 — Resources vs Tools
+
+
+Resources (the policy binder):
+  Stable data — same for every request
+  Loaded once at session start
+  Zero tokens per access
+  Use for: policies, limits, SLAs, criteria
+
+Tools (the phone call):
+  Live data — varies per request
+  Round-trip per access
+  Tokens consumed per call
+  Use for: customer records, orders, payments, actions
+
+
+### Token math:
+
+1,000 tickets × 3 policy checks × 150 tokens = 450,000 tokens/day
+With resources: 0 additional tokens
+
+
+
+### Concept 12 — The Scoping Rules
+
+ClaudeCare scope:
+  coordinator:  0 tools  (routes only)
+  billing:      5 tools  (customer, invoice, payments, refund, escalate)
+  returns:      4 tools  (customer, order, eligibility, escalate)
+  technical:    4 tools  (customer, api_status, error_logs, escalate)
+
+
+### DESIGN LAYER (Day A)
+  1. Description    → 5 components, every tool, no exceptions
+  2. Naming         → domain + action verb, split > consolidate
+  3. Anti-patterns  → 6 failure modes, each causes different problem
+  4. Schemas        → nullable prevents fabrication
+  5. Reliability    → consistency across runs, not just accuracy
+  6. Errors         → 4 categories, isRetryable tells Claude what to do
+  7. Empty vs fail  → { } in catch = silent bug
+
+### CONFIGURATION LAYER (Day B)
+  8. Config scope   → .mcp.json (team) vs ~/.claude.json (personal)
+  9. Env expansion  → ${VAR} in file, real value in .env
+  10. Discovery     → once at session start, restart for new tools
+  11. Resources     → policy docs free, tools for live data
+  12. Scoping       → 5 tools max, one registry filtered per agent
+
+
+### The 5 Exam Traps — Role 3 Edition
+
+Trap 1: "Works for me but not my team"
+        → Config in ~/.claude.json not .mcp.json
+
+Trap 2: "I deleted the secret from .mcp.json so it's safe"
+        → Git history is permanent. Rotate the key.
+
+Trap 3: "I added a tool, Claude Code doesn't see it"
+        → Restart Claude Code. Discovery already happened.
+
+Trap 4: "I use a get_policy tool for refund limits"
+        → That's a resource. Same data every request = resource.
+
+Trap 5: "Every agent has all tools for flexibility"
+        → Selection degrades above 18 tools. Scope per role.
