@@ -239,3 +239,212 @@ Every resource covers stable policy data:
 
 *Part of the Claude Certified Architect Foundations (CCA-F) study system.*
 *Built through the ClaudeCare project — a production-grade AI customer support platform.*
+
+# Role 3 — Real World Examples
+## What MCP Tool Builders Actually Build
+
+---
+
+## Example 1 — E-Commerce Platform (ShopFlow)
+
+**Context:** An AI shopping assistant that helps customers track orders, check product availability, and handle returns.
+
+**Role 3 builds:**
+
+```
+Tools:
+  get_order_status      → tracks shipment by order ID
+  check_inventory       → checks stock for a product SKU
+  lookup_product        → retrieves product details and price
+  initiate_return       → creates a return request
+  escalate_to_support   → routes to human support agent
+
+Resources:
+  shopflow://policies/return-policy
+    "30-day return window. Electronics: 15 days."
+  shopflow://policies/shipping-sla
+    "Standard: 5-7 days. Express: 1-2 days."
+```
+
+**Why this is Role 3 work:**
+
+The AI assistant (Role 1) calls `check_inventory` to answer "is this in stock?" The assistant does not know how ShopFlow's warehouse database works. It calls the tool. The tool knows. Role 3 built that bridge.
+
+**Key decision made:**
+
+`return-policy` is a resource, not a tool — the return window never changes per customer. Loading it once at session start saves thousands of tool call tokens per day.
+
+---
+
+## Example 2 — Hospital Appointment System (MediBook)
+
+**Context:** An AI scheduling assistant that books appointments, checks doctor availability, and retrieves patient records.
+
+**Role 3 builds:**
+
+```
+Tools:
+  get_patient_profile     → retrieves patient details by patient ID
+  check_doctor_availability → checks open slots for a doctor
+  book_appointment        → creates an appointment record
+  cancel_appointment      → cancels an existing booking
+  get_medical_history     → retrieves past visits (permission-restricted)
+
+Resources:
+  medibook://config/booking-rules
+    "Appointments require 24hr notice for cancellation.
+     Emergency slots available same-day for urgent cases."
+  medibook://config/departments
+    "Cardiology, Neurology, Orthopedics, General Practice —
+     and their respective booking codes."
+```
+
+**Error response example:**
+
+```javascript
+// get_medical_history — patient without consent on file
+return {
+  isError: true,
+  errorCategory: "permission",
+  isRetryable: false,
+  description: "Patient C-4421 has not provided consent for
+                AI-assisted record access. Direct the patient
+                to sign the digital consent form at reception."
+}
+```
+
+**Key decision made:**
+
+`get_medical_history` is a permission-restricted tool. The error is `isRetryable: false` — consent does not appear by retrying. The description tells the assistant exactly what to do next.
+
+---
+
+## Example 3 — Real Estate Listing Platform (PropFind)
+
+**Context:** An AI property advisor that searches listings, compares properties, and schedules viewings.
+
+**Role 3 builds:**
+
+```
+Tools:
+  search_listings       → searches properties by city, budget, bedrooms
+  get_property_details  → retrieves full listing by property ID
+  check_viewing_slots   → checks available viewing times for a property
+  book_viewing          → schedules a viewing appointment
+  get_agent_profile     → retrieves the listing agent's contact details
+
+Resources:
+  propfind://config/search-filters
+    "Supported filters: city, min_price, max_price, bedrooms,
+     bathrooms, property_type (apartment/house/villa)"
+  propfind://policies/viewing-rules
+    "Viewings require 48hr advance booking.
+     Maximum 3 viewings per day per user."
+```
+
+**Schema design example:**
+
+```javascript
+// search_listings input schema
+{
+  type: "object",
+  required: ["city"],        // city is truly required — cannot search without
+  properties: {
+    city: { type: "string" },
+    min_price: { type: ["number", "null"] },  // nullable — user may not have min
+    max_price: { type: ["number", "null"] },  // nullable — user may not have max
+    bedrooms: { type: ["number", "null"] },   // nullable — may not care about count
+    property_type: {
+      type: ["string", "null"],
+      enum: ["apartment", "house", "villa", null]
+    }
+  }
+}
+```
+
+**Key decision made:**
+
+Every filter except `city` is nullable. A user who says "show me properties in Karachi" should not get an error for not specifying a price range — the tool handles null filters gracefully and returns all Karachi listings.
+
+---
+
+## Example 4 — HR Platform (TeamTrack)
+
+**Context:** An AI HR assistant that answers employee questions about leave balances, payroll, and company policies.
+
+**Role 3 builds:**
+
+```
+Tools:
+  get_employee_profile    → retrieves employee details by employee ID
+  check_leave_balance     → returns remaining leave days by type
+  submit_leave_request    → creates a leave request
+  get_payslip             → retrieves payslip for a specific month
+  escalate_to_hr          → routes sensitive matters to HR team
+
+Resources:
+  teamtrack://policies/leave-policy
+    "Annual leave: 21 days. Sick leave: 10 days.
+     Carry-forward maximum: 5 days. No carry-forward for sick leave."
+  teamtrack://policies/public-holidays-2026
+    "Jan 1, Mar 23, Aug 14, Dec 25 — full list of 12 public holidays."
+  teamtrack://config/hr-contacts
+    "HR Manager: hr@company.com | Payroll: payroll@company.com"
+```
+
+**Tool scoping example:**
+
+```
+Employee-facing AI assistant gets:
+  get_employee_profile (own profile only)
+  check_leave_balance
+  submit_leave_request
+  escalate_to_hr
+
+HR Manager AI assistant gets:
+  get_employee_profile (any employee)
+  check_leave_balance (any employee)
+  approve_leave_request      ← additional tool
+  reject_leave_request       ← additional tool
+  get_payroll_report         ← additional tool
+  escalate_to_hr
+```
+
+**Key decision made:**
+
+Same tool registry. Two different filtered scopes. The employee assistant cannot approve or reject leave — that tool is not in its scope. The HR assistant can. One registry. Two views. Access control enforced through scoping, not through prompt instructions.
+
+---
+
+## The Pattern Across All 4 Examples
+
+Every Role 3 implementation follows the same structure regardless of domain:
+
+```
+1. Identify what data Claude needs to act on
+   → Those become tools (live, request-specific)
+
+2. Identify what reference data Claude needs to reason
+   → Those become resources (stable, policy-level)
+
+3. Design tool descriptions with 5 components
+   → Claude selects the right tool every time
+
+4. Design schemas with correct field types
+   → No fabrication on absent data
+
+5. Implement structured errors with 4 categories
+   → Claude knows how to recover from every failure
+
+6. Configure .mcp.json with ${VAR} expansion
+   → Secrets stay out of git
+
+7. Filter tools per agent
+   → Each agent gets only what its role requires
+```
+
+The domain changes. The Role 3 pattern does not.
+
+---
+
+*Examples for role_3.md — Claude Certified Architect Foundations (CCA-F)*
